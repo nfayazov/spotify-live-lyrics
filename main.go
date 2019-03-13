@@ -3,24 +3,15 @@ package main
 import (
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/rhnvrm/lyric-api-go"
 	"github.com/zmb3/spotify"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 )
 
 const redirectURI = "http://localhost:8080/callback"
-
-var html = `
-<br/>
-<a href="/player/play">Play</a><br/>
-<a href="/player/pause">Pause</a><br/>
-<a href="/player/next">Next track</a><br/>
-<a href="/player/previous">Previous Track</a><br/>
-<a href="/player/shuffle">Shuffle</a><br/>
-`
 
 const (
 	port = 8080
@@ -40,7 +31,7 @@ func init() {
 	}
 	clientId = os.Getenv("SPOTIFY_ID")
 	secretKey = os.Getenv("SPOTIFY_SECRET")
-	key = os.Getenv("KEY")
+	key = os.Getenv("ENCRYPTION_KEY")
 	spotifyAuth.SetAuthInfo(clientId, secretKey)
 	tpl = template.Must(template.ParseGlob("templates/*"))
 	//sessionsCleaned := time.Now()
@@ -48,10 +39,9 @@ func init() {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", index)
+	mux.HandleFunc("/", playerHandler)
 	mux.HandleFunc("/authenticate", initAuth)
 	mux.HandleFunc("/callback", completeAuth)
-	mux.HandleFunc("/player", playerHandler)
 
 	mux.Handle("/favicon.ico", http.NotFoundHandler())
 
@@ -76,50 +66,23 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 	playerState, e = client.PlayerState()
 
-	if e != nil {
-		log.Fatalf("Getting player state: %s", e.Error())
-	}
-	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
-	action := strings.TrimPrefix(r.URL.Path, "/player/")
-	fmt.Println("Got request for:", action)
-	var err error
-	switch action {
-	case "play":
-		err = client.Play()
-	case "pause":
-		err = client.Pause()
-	case "next":
-		err = client.Next()
-	case "previous":
-		err = client.Previous()
-	case "shuffle":
-		playerState.ShuffleState = !playerState.ShuffleState
-		err = client.Shuffle(playerState.ShuffleState)
-	}
-	if err != nil {
-		log.Print(err)
-	}
+	currPlaying := playerState.CurrentlyPlaying
+	artist := currPlaying.Item.SimpleTrack.Artists[0].Name
+	title := currPlaying.Item.SimpleTrack.Name
+	fmt.Printf("Artist: %s, Title: %s\n", artist, title)
 
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, html)
+	lyric := getLyrics(artist, title)
+	fmt.Fprintf(w, lyric)
+
+	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	log.Println("Got request for:", r.URL.String())
-	c, err := r.Cookie("session")
+func getLyrics(artist, title string) string {
+	l := lyrics.New()
+	lyric, err := l.Search(artist, title)
 	if err != nil {
-		http.Error(w, "Cookie not found\n", http.StatusInternalServerError)
-		return
+		fmt.Printf("Can't fetch lyrics: %s\n", err.Error())
+		return "Not found"
 	}
-
-	s, ok := sessions[c.Value]
-	if !ok {
-		http.Error(w, "Client not found\n", http.StatusInternalServerError)
-		return
-	}
-
-	_ = s
-	fmt.Println("End of index")
-	//tpl.ExecuteTemplate(w, "index.gohtml", c.Value, s.client)
-	fmt.Fprintf(w, "Session Id: %s", c.Value)
+	return lyric
 }

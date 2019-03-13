@@ -141,11 +141,13 @@ func createSession(w http.ResponseWriter, encToken []byte) {
 	c.MaxAge = sessionLength
 	http.SetCookie(w, c)
 
+	// TODO: encrypt sessionId
+	//encSessionId := encrypt.Encrypt(key, )
+
 	sessions[c.Value] = session{encToken,time.Now()}
 }
 
 func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error) {
-	var client *spotify.Client
 	token := &oauth2.Token{}
 
 	// get session from cookie
@@ -158,13 +160,13 @@ func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error
 	jsonToken := encrypt.Decrypt(key, sesh.token)
 	err = json.Unmarshal([]byte(jsonToken), token)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error unmarshalling client: %s", err.Error()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error unmarshalling token: %s", err.Error()), http.StatusInternalServerError)
 		return nil, err
 	}
 
-	*client = spotifyAuth.NewClient(token)
+	client := spotifyAuth.NewClient(token)
 
-	return client, nil
+	return &client, nil
 }
 
 func getSession(w http.ResponseWriter, req *http.Request) (session, error) {
