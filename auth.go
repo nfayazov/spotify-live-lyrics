@@ -20,13 +20,11 @@ type session struct {
 const (
 	sessionLength			= 900	// 30 mins
 	sessionCleanupInterval 	= 300	// 10 mins
-	redirectURI 			= "http://localhost:8080/callback"
 )
 
 var (
 	states      = make(map[string]string)	// sID, oauth state
 	sessions    = make(map[string]session)	// sessionId, session
-	spotifyAuth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
 	lastSessionsCleaned time.Time
 )
 

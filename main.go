@@ -28,7 +28,8 @@ var (
 	port = 8080
 	tpl *template.Template
 	lyricCache *cache
-	clientId, secretKey, key string
+	clientId, secretKey, key, redirectURI string
+	spotifyAuth spotify.Authenticator
 )
 
 func init() {
@@ -39,15 +40,20 @@ func init() {
 	}
 
 	if os.Getenv("PRODUCTION") != "true" {
+		redirectURI = "http://localhost:8080/callback"
 		e := godotenv.Load()
 		if e != nil {
 			log.Fatal("Error loading .env file")
 		}
+	} else {
+		redirectURI = "https://lyrics-spotify.herokuapp.com/callback"
 	}
+
 	clientId = os.Getenv("SPOTIFY_ID")
 	secretKey = os.Getenv("SPOTIFY_SECRET")
 	key = os.Getenv("ENCRYPTION_KEY")
 
+	spotifyAuth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
 	spotifyAuth.SetAuthInfo(clientId, secretKey)
 	tpl = template.Must(template.ParseGlob("templates/*"))
 
