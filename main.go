@@ -3,15 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/joho/godotenv"
+	"log"
 	"spotify-live-lyricist/pkg/lyricTreeSet"
 	"strconv"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/rhnvrm/lyric-api-go"
 	"github.com/zmb3/spotify"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -33,14 +33,16 @@ var (
 
 func init() {
 	// get env variables
-	p, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
+	p, _ := strconv.Atoi(os.Getenv("PORT"))
+	if p != 0 {
 		port = p
 	}
 
-	e := godotenv.Load()
-	if e != nil {
-		log.Fatal("Error loading .env file")
+	if os.Getenv("PRODUCTION") != "true" {
+		e := godotenv.Load()
+		if e != nil {
+			log.Fatal("Error loading .env file")
+		}
 	}
 	clientId = os.Getenv("SPOTIFY_ID")
 	secretKey = os.Getenv("SPOTIFY_SECRET")
