@@ -1,0 +1,124 @@
+{
+	"ImportPath": "spotify-live-lyricist",
+	"GoVersion": "go1.11",
+	"GodepVersion": "v80",
+	"Deps": [
+		{
+			"ImportPath": "github.com/PuerkitoBio/goquery",
+			"Comment": "v1.5.0-4-g3dcf72e",
+			"Rev": "3dcf72e6c17f694381a21592651ca1464ded0e10"
+		},
+		{
+			"ImportPath": "github.com/andybalholm/cascadia",
+			"Comment": "v1.0.0-2-g680b6a5",
+			"Rev": "680b6a57bda4f657485ad44bdea42342ead737bc"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/containers",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/lists",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/lists/singlylinkedlist",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/maps",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/maps/hashmap",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/emirpasic/gods/utils",
+			"Comment": "v1.12.0-4-g729073a",
+			"Rev": "729073a73ce2057955fafa2a8f0ac62b99e950c9"
+		},
+		{
+			"ImportPath": "github.com/gosimple/slug",
+			"Comment": "v1.4.2",
+			"Rev": "42ac18c34c2c6f4843fa48167317dcaa9416d1e2"
+		},
+		{
+			"ImportPath": "github.com/joho/godotenv",
+			"Comment": "v1.3.0-10-g5c0e6c6",
+			"Rev": "5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941"
+		},
+		{
+			"ImportPath": "github.com/rainycape/unidecode",
+			"Rev": "cb7f23ec59bec0d61b19c56cd88cee3d0cc1870c"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go/genius",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go/goquery_helpers",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go/lyricswikia",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go/musixmatch",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/rhnvrm/lyric-api-go/songlyrics",
+			"Comment": "v0.1.3",
+			"Rev": "6e1e54754131aed4ffca9a83ec7cd7586e6a3c06"
+		},
+		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Comment": "v1.2.0-12-gb2ce238",
+			"Rev": "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
+		},
+		{
+			"ImportPath": "github.com/zmb3/spotify",
+			"Rev": "94cbe6dc5cc2eaa467e36f30b130b0f827e4262d"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context/ctxhttp",
+			"Rev": "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "9b3c75971fc92dd27c6436a37c05c831498658f1"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/internal",
+			"Rev": "9b3c75971fc92dd27c6436a37c05c831498658f1"
+		}
+	]
+}
