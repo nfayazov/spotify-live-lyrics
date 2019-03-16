@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"spotify-live-lyricist/pkg/lyricTreeSet"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/rhnvrm/lyric-api-go"
@@ -16,11 +17,8 @@ import (
 )
 
 const (
-	redirectURI = "http://localhost:8080/callback"
 	port = 8080
-	sessionLength	= 900	// 30 mins
-
-	cacheLimit		= 3
+	cacheLimit		= 300
 )
 
 type cache struct {
@@ -51,7 +49,7 @@ func init() {
 		lSet: lyricTreeSet.New(cacheLimit),
 	}
 
-	//sessionsCleaned := time.Now()
+	lastSessionsCleaned = time.Now()
 }
 
 func main() {

@@ -17,14 +17,24 @@ type session struct {
 	lastActivity	time.Time
 }
 
+const (
+	sessionLength			= 900	// 30 mins
+	sessionCleanupInterval 	= 300	// 10 mins
+	redirectURI 			= "http://localhost:8080/callback"
+)
+
 var (
 	states      = make(map[string]string)	// sID, oauth state
 	sessions    = make(map[string]session)	// sessionId, session
 	spotifyAuth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
+	lastSessionsCleaned time.Time
 )
 
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func (w http.ResponseWriter, req *http.Request) {
+		// first things first
+		go cleanSessions()
+
 		if req.URL.Path != "/authenticate" && req.URL.Path != "/callback" {
 			c, err := req.Cookie("session")
 			if err != nil {
@@ -81,7 +91,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createSession(w, encToken)
+	_ = createSession(w, encToken)
 
 	fmt.Println("Successfully authenticated")
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -95,12 +105,15 @@ func checkStateAndGetToken(w http.ResponseWriter, r *http.Request) (*oauth2.Toke
 		return nil, err
 	}
 
+	// delete cookie from client
+	sID.MaxAge = -1
+	http.SetCookie(w, sID)
+
 	state, ok := states[sID.Value]
 	if !ok {
 		http.Error(w, "OAuth state not found", http.StatusInternalServerError)
 		return nil, errors.New("OAuth state not found")
 	}
-
 
 	if st := r.FormValue("state"); st != state {
 		http.Error(w, fmt.Sprintf("State mismatch: %s != %s\n", st, state), http.StatusNotFound)
@@ -131,7 +144,7 @@ func marshalAndEncryptToken(w http.ResponseWriter, tok *oauth2.Token) ([]byte, e
 }
 
 // Passing encrypted access token forces binding between local sessions and oAuth sessions.
-func createSession(w http.ResponseWriter, encToken []byte) {
+func createSession(w http.ResponseWriter, encToken []byte) session {
 	// create session
 	sID, _ := uuid.NewV4()
 	c := &http.Cookie{
@@ -144,9 +157,13 @@ func createSession(w http.ResponseWriter, encToken []byte) {
 	// TODO: encrypt sessionId
 	//encSessionId := encrypt.Encrypt(key, )
 
-	sessions[c.Value] = session{encToken,time.Now()}
+	s := session{encToken,time.Now()}
+	sessions[c.Value] = s
+
+	return s
 }
 
+// getClient gets token from session and exchanges for client
 func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error) {
 	token := &oauth2.Token{}
 
@@ -183,4 +200,18 @@ func getSession(w http.ResponseWriter, req *http.Request) (session, error) {
 	}
 
 	return s, nil
+}
+
+func cleanSessions() {
+	if time.Now().Sub(lastSessionsCleaned) < (sessionCleanupInterval * time.Second) {
+		return
+	}
+
+	for k, s := range sessions {
+		if time.Now().Sub(s.lastActivity) > sessionLength*time.Second {
+			delete(sessions, k)
+		}
+	}
+
+	lastSessionsCleaned = time.Now()
 }
