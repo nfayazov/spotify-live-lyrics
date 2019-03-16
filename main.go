@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"spotify-live-lyricist/pkg/lyricTreeSet"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -16,10 +17,7 @@ import (
 	"sync"
 )
 
-const (
-	port = 8080
-	cacheLimit		= 300
-)
+const cacheLimit = 300
 
 type cache struct {
 	lSet		*lyricTreeSet.LyricsSet
@@ -27,6 +25,7 @@ type cache struct {
 }
 
 var (
+	port = 8080
 	tpl *template.Template
 	lyricCache *cache
 	clientId, secretKey, key string
@@ -34,6 +33,11 @@ var (
 
 func init() {
 	// get env variables
+	p, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		port = p
+	}
+
 	e := godotenv.Load()
 	if e != nil {
 		log.Fatal("Error loading .env file")
