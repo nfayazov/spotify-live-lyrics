@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"encrypt"
 	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
 	"net/http"
+	"spotify-live-lyricist/pkg/encrypt"
 	"time"
 )
 
