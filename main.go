@@ -83,7 +83,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 	artist, title, err := getSpotifyTrack(client, w)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -105,12 +105,17 @@ func getSpotifyTrack(client *spotify.Client, w http.ResponseWriter) (string, str
 	playerState, e = client.PlayerState()
 
 	currPlaying := playerState.CurrentlyPlaying
-	artist := currPlaying.Item.SimpleTrack.Artists[0].Name
-	title := currPlaying.Item.SimpleTrack.Name
-	fmt.Printf("Artist: %s, Title: %s\n", artist, title)
-	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 
-	return artist, title, nil
+	if currPlaying.Playing == true && currPlaying.Item != nil {
+		artist := currPlaying.Item.SimpleTrack.Artists[0].Name
+		title := currPlaying.Item.SimpleTrack.Name
+		fmt.Printf("Artist: %s, Title: %s\n", artist, title)
+		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
+		return artist, title, nil
+	} else {
+		return "", "", errors.New("Spotify Track Not Found\n")
+	}
+
 }
 
 func getCachedLyrics(artist, title string) string {
