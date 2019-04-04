@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"github.com/joho/godotenv"
 	"log"
 	"spotify-live-lyricist/pkg/lyricTreeSet"
@@ -30,6 +31,7 @@ var (
 	lyricCache *cache
 	clientId, secretKey, key, redirectURI string
 	spotifyAuth spotify.Authenticator
+	conn redis.Conn
 )
 
 func init() {
@@ -62,13 +64,22 @@ func init() {
 	}
 
 	lastSessionsCleaned = time.Now()
+
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = ":6379"
+	}
+	pool := newPool()
+	conn = pool.Get()
 }
 
 func main() {
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", playerHandler)
 	mux.HandleFunc("/authenticate", initAuth)
 	mux.HandleFunc("/callback", completeAuth)
+	mux.HandleFunc("/logout", logout)
 	mux.Handle("/favicon.ico", http.NotFoundHandler())
 
 	fmt.Printf("Listening on port %d\n", port)
@@ -83,12 +94,13 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 	artist, title, err := getSpotifyTrack(client, w)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err.Error()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(err.Error()), http.StatusInternalServerError)
 		return
 	}
 
 	lyric := getCachedLyrics(artist, title)
 	fmt.Fprintf(w, lyric)
+	//fmt.Fprint(w, "Logout: ")
 
 }
 
@@ -100,7 +112,7 @@ func getSpotifyTrack(client *spotify.Client, w http.ResponseWriter) (string, str
 		fmt.Printf("Getting user: %s", e.Error())
 		return "", "", e
 	}
-	fmt.Println("You are logged in as:", user.ID)
+	fmt.Fprintf(w, "You are logged in as: %s\n", user.ID)
 
 	playerState, e = client.PlayerState()
 
@@ -109,8 +121,8 @@ func getSpotifyTrack(client *spotify.Client, w http.ResponseWriter) (string, str
 	if currPlaying.Playing == true && currPlaying.Item != nil {
 		artist := currPlaying.Item.SimpleTrack.Artists[0].Name
 		title := currPlaying.Item.SimpleTrack.Name
-		fmt.Printf("Artist: %s, Title: %s\n", artist, title)
-		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
+		fmt.Fprintf(w, "Found your %s (%s)\n\n", playerState.Device.Type, playerState.Device.Name)
+		fmt.Fprintf(w, "Artist: %s\nTitle: %s\n\n", artist, title)
 		return artist, title, nil
 	} else {
 		return "", "", errors.New("Spotify Track Not Found\n")

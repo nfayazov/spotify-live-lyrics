@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
@@ -13,13 +14,13 @@ import (
 )
 
 type session struct {
-	token			[]byte
-	lastActivity	time.Time
+	Token        []byte
+	LastActivity time.Time
 }
 
 const (
 	sessionLength			= 900	// 30 mins
-	sessionCleanupInterval 	= 300	// 10 mins
+	sessionCleanupInterval 	= 15	// 10 mins
 )
 
 var (
@@ -31,7 +32,7 @@ var (
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func (w http.ResponseWriter, req *http.Request) {
 		// first things first
-		go cleanSessions()
+		//go cleanSessions()
 
 		if req.URL.Path != "/authenticate" && req.URL.Path != "/callback" {
 			c, err := req.Cookie("session")
@@ -40,12 +41,21 @@ func authMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			s, ok := sessions[c.Value]
-			if ok {
-				s.lastActivity = time.Now()
-				sessions[c.Value] = s
-			} else {
+			//s, ok := sessions[c.Value]
+			s, err := getSessionFromRedis(c.Value)
+			if err == nil {
+				s.LastActivity = time.Now()
+				err := setSession(c.Value, *s)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				//sessions[c.Value] = s
+			} else if err == redis.ErrNil {
 				http.Redirect(w, req, "/authenticate", http.StatusSeeOther)
+				return
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -89,7 +99,10 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = createSession(w, encToken)
+	_, err = createSession(w, encToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	fmt.Println("Successfully authenticated")
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -97,9 +110,9 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 
 // Looks for sID cookie (which represents oauth state), checks if it matched, get token and deletes state
 func checkStateAndGetToken(w http.ResponseWriter, r *http.Request) (*oauth2.Token, error) {
-	sID,err := r.Cookie("sID")
+	sID, err := r.Cookie("sID")
 	if err != nil {
-		http.Error(w, "OAuth cookie not found", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, err
 	}
 
@@ -142,7 +155,7 @@ func marshalAndEncryptToken(w http.ResponseWriter, tok *oauth2.Token) ([]byte, e
 }
 
 // Passing encrypted access token forces binding between local sessions and oAuth sessions.
-func createSession(w http.ResponseWriter, encToken []byte) session {
+func createSession(w http.ResponseWriter, encToken []byte) (*session, error) {
 	// create session
 	sID, _ := uuid.NewV4()
 	c := &http.Cookie{
@@ -156,9 +169,16 @@ func createSession(w http.ResponseWriter, encToken []byte) session {
 	//encSessionId := encrypt.Encrypt(key, )
 
 	s := session{encToken,time.Now()}
-	sessions[c.Value] = s
 
-	return s
+	// Save to Redis
+	fmt.Printf("SessionID: %s\n", sID.String())
+	err := setSession(c.Value, s)
+	if err != nil {
+		return nil, err
+	}
+	//sessions[c.Value] = s
+
+	return &s, nil
 }
 
 // getClient gets token from session and exchanges for client
@@ -172,7 +192,7 @@ func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error
 	}
 
 	// get token from session
-	jsonToken := encrypt.Decrypt(key, sesh.token)
+	jsonToken := encrypt.Decrypt(key, sesh.Token)
 	err = json.Unmarshal([]byte(jsonToken), token)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error unmarshalling token: %s", err.Error()), http.StatusInternalServerError)
@@ -184,32 +204,66 @@ func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error
 	return &client, nil
 }
 
-func getSession(w http.ResponseWriter, req *http.Request) (session, error) {
+func getSession(w http.ResponseWriter, req *http.Request) (*session, error) {
 	c, err := req.Cookie("session")
 	if err != nil {
-		http.Error(w, "Session not found\n", http.StatusForbidden)
-		return session{}, err
+		return nil, err
 	}
 
-	s, ok := sessions[c.Value]
+	sesh, err := getSessionFromRedis(c.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Check if session expired
+
+	/*s, ok := sessions[c.Value]
 	if !ok {
 		http.Error(w, "Session not found\n", http.StatusForbidden)
-		return session{}, err
-	}
+		return nil, err
+	}*/
 
-	return s, nil
+	return sesh, nil
 }
 
-func cleanSessions() {
+/*func cleanSessions() {
 	if time.Now().Sub(lastSessionsCleaned) < (sessionCleanupInterval * time.Second) {
 		return
 	}
 
-	for k, s := range sessions {
-		if time.Now().Sub(s.lastActivity) > sessionLength*time.Second {
-			delete(sessions, k)
-		}
+	var s session
+
+	keys, err := redis.Strings(conn.Do("KEYS", "session:*"))
+	if err != nil {
+		fmt.Printf("Error getting sessions from Redis while cleaning\n")
+		return
 	}
 
+	for k, _ := range keys {
+
+	}
+
+	r, err := redis.Scan(values, &s)
+	_ = r
+
+	//for k, s := range allSessions {
+	//	if time.Now().Sub(s.LastActivity) > sessionLength*time.Second {
+	//		delete(sessions, k)
+	//	}
+	//}
+
 	lastSessionsCleaned = time.Now()
+}*/
+
+func logout(w http.ResponseWriter, req *http.Request) {
+	c, err := req.Cookie("session")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	c.MaxAge = -1
+	http.SetCookie(w, c)
+
+	delete(sessions, c.Value)
+	fmt.Fprint(w, "Successfully logged out")
 }
