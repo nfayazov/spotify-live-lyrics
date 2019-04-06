@@ -31,9 +31,6 @@ var (
 
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func (w http.ResponseWriter, req *http.Request) {
-		// first things first
-		//go cleanSessions()
-
 		if req.URL.Path != "/authenticate" && req.URL.Path != "/callback" {
 			c, err := req.Cookie("session")
 			if err != nil {
@@ -41,7 +38,6 @@ func authMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			//s, ok := sessions[c.Value]
 			s, err := getSessionFromRedis(c.Value)
 			if err == nil {
 				s.LastActivity = time.Now()
@@ -50,7 +46,6 @@ func authMiddleware(next http.Handler) http.Handler {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				//sessions[c.Value] = s
 			} else if err == redis.ErrNil {
 				http.Redirect(w, req, "/authenticate", http.StatusSeeOther)
 				return
@@ -82,7 +77,6 @@ func initAuth(w http.ResponseWriter, r *http.Request) {
 	url := spotifyAuth.AuthURL(state.String())
 	states[sID.String()] = state.String()
 
-	//fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
@@ -165,9 +159,6 @@ func createSession(w http.ResponseWriter, encToken []byte) (*session, error) {
 	c.MaxAge = sessionLength
 	http.SetCookie(w, c)
 
-	// TODO: encrypt sessionId
-	//encSessionId := encrypt.Encrypt(key, )
-
 	s := session{encToken,time.Now()}
 
 	// Save to Redis
@@ -176,18 +167,22 @@ func createSession(w http.ResponseWriter, encToken []byte) (*session, error) {
 	if err != nil {
 		return nil, err
 	}
-	//sessions[c.Value] = s
 
 	return &s, nil
 }
 
-// getClient gets token from session and exchanges for client
+// getClient gets token from session and exchanges for client.
+// This function takes both the ReponseWriter and the Request,
+// so it will handle its own errors instead of leaving that to the handler
 func getClient(w http.ResponseWriter, req *http.Request) (*spotify.Client, error) {
 	token := &oauth2.Token{}
 
 	// get session from cookie
 	sesh, err := getSession(w, req)
-	if err != nil {
+	if err == redis.ErrNil {
+		http.Redirect(w, req, "/authenticate", http.StatusTemporaryRedirect)
+		return nil, err // return error here so that the caller handler also returns
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -215,55 +210,23 @@ func getSession(w http.ResponseWriter, req *http.Request) (*session, error) {
 		return nil, err
 	}
 
-	// TODO: Check if session expired
-
-	/*s, ok := sessions[c.Value]
-	if !ok {
-		http.Error(w, "Session not found\n", http.StatusForbidden)
-		return nil, err
-	}*/
-
 	return sesh, nil
 }
-
-/*func cleanSessions() {
-	if time.Now().Sub(lastSessionsCleaned) < (sessionCleanupInterval * time.Second) {
-		return
-	}
-
-	var s session
-
-	keys, err := redis.Strings(conn.Do("KEYS", "session:*"))
-	if err != nil {
-		fmt.Printf("Error getting sessions from Redis while cleaning\n")
-		return
-	}
-
-	for k, _ := range keys {
-
-	}
-
-	r, err := redis.Scan(values, &s)
-	_ = r
-
-	//for k, s := range allSessions {
-	//	if time.Now().Sub(s.LastActivity) > sessionLength*time.Second {
-	//		delete(sessions, k)
-	//	}
-	//}
-
-	lastSessionsCleaned = time.Now()
-}*/
 
 func logout(w http.ResponseWriter, req *http.Request) {
 	c, err := req.Cookie("session")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	c.MaxAge = -1
 	http.SetCookie(w, c)
 
-	delete(sessions, c.Value)
+	if err := deleteSession(c.Value); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	fmt.Fprint(w, "Successfully logged out")
 }

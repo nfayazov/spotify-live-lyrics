@@ -158,7 +158,7 @@ func getLyrics(artist, title string) (string, error) {
 	lyric, err := l.Search(artist, title)
 	if err != nil {
 		fmt.Printf("Can't fetch lyrics: %s\n", err.Error())
-		return "Not found", errors.New("not found")
+		return "Lyrics not found :(", errors.New("not found")
 	}
 	return lyric, nil
 }

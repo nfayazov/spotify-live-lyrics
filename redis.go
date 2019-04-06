@@ -1,8 +1,7 @@
 package main
 
 import (
-	json2 "encoding/json"
-	"fmt"
+	json "encoding/json"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -23,12 +22,12 @@ func newPool() *redis.Pool {
 }
 
 func setSession(sessionId string, s session) error {
-	json, err := json2.Marshal(s)
+	json, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Do("SET", sessionPrefix+sessionId, json)
+	_, err = conn.Do("SETEX", sessionPrefix+sessionId, sessionLength, json)
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func getSessionFromRedis(sessionId string) (*session, error) {
 	}
 
 	s := session{}
-	err = json2.Unmarshal([]byte(tmp), &s)
+	err = json.Unmarshal([]byte(tmp), &s)
 	if err != nil {
 		return nil, err
 	}
@@ -52,32 +51,10 @@ func getSessionFromRedis(sessionId string) (*session, error) {
 
 }
 
-func pingRedis() {
-	pool := newPool()
-	conn := pool.Get()
-	defer conn.Close()
-	err := ping(conn)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func ping(c redis.Conn) error {
-	// Send PING command to Redis
-	pong, err := c.Do("PING")
+func deleteSession(sessionId string) error {
+	_, err := conn.Do("DEL", sessionPrefix+sessionId)
 	if err != nil {
 		return err
 	}
-
-	// PING command returns a Redis "Simple String"
-	// Use redis.String to convert the interface type to string
-	s, err := redis.String(pong, err)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("PING Response = %s\n", s)
-	// Output: PONG
-
 	return nil
 }
