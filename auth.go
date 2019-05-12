@@ -95,7 +95,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	fmt.Println("Successfully authenticated")
+	//fmt.Println("Successfully authenticated")
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
@@ -159,7 +159,7 @@ func createSession(w http.ResponseWriter, encToken []byte) (*session, error) {
 	s := session{encToken,time.Now()}
 
 	// Save to Redis
-	fmt.Printf("SessionID: %s\n", sID.String())
+	//fmt.Printf("SessionID: %s\n", sID.String())
 	err := setSession(c.Value, s)
 	if err != nil {
 		return nil, err

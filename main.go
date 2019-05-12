@@ -56,7 +56,8 @@ func init() {
 			log.Fatal("Error loading .env file")
 		}
 	} else {
-		redirectURI = "https://lyrics-spotify.herokuapp.com/callback"
+		hostUrl := os.Getenv("HOST_URL")
+		redirectURI = hostUrl + "/callback"
 	}
 
 	clientId = os.Getenv("SPOTIFY_ID")
@@ -76,10 +77,12 @@ func init() {
 
 	// Configure Redis
 	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = ":6379"
+	redisPort := os.Getenv("REDIS_PORT")
+	address := redisHost+":"+redisPort // "localhost:6379"
+	if address == ":" { // dev
+		address = ":6379"
 	}
-	pool := newPool()
+	pool := newPool(address)
 	conn = pool.Get()
 
 	tpl = template.Must(template.ParseGlob("templates/*.gohtml"))
