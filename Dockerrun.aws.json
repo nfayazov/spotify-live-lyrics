@@ -1,0 +1,25 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "nfayazov/spotify-live-lyricist",
+      "hostname": "app",
+      "essential": false,
+      "memory": 128
+    },
+    {
+      "name": "nginx",
+      "image:": "nfayazov/spotify-nginx",
+      "hostname": "nginx",
+      "essential": true,
+      "portMappings": [
+        {
+          "hostPort": 80,
+          "containerPort": 80
+        }
+      ],
+      "links": ["app"]
+    }
+  ]
+}

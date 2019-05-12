@@ -8,6 +8,7 @@ import (
 	"log"
 	"spotify-live-lyricist/pkg/lyricTreeSet"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rhnvrm/lyric-api-go"
@@ -34,6 +35,13 @@ var (
 	conn redis.Conn
 )
 
+type Result struct {
+	Username				string
+	DeviceType, DeviceName	string
+	Artist, Title 			string
+	Text					template.HTML
+}
+
 func init() {
 	// get env variables
 	p, _ := strconv.Atoi(os.Getenv("PORT"))
@@ -55,6 +63,7 @@ func init() {
 	secretKey = os.Getenv("SPOTIFY_SECRET")
 	key = os.Getenv("ENCRYPTION_KEY")
 
+	// Configure Spotify
 	spotifyAuth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
 	spotifyAuth.SetAuthInfo(clientId, secretKey)
 	tpl = template.Must(template.ParseGlob("templates/*"))
@@ -65,12 +74,15 @@ func init() {
 
 	lastSessionsCleaned = time.Now()
 
+	// Configure Redis
 	redisHost := os.Getenv("REDIS_HOST")
 	if redisHost == "" {
 		redisHost = ":6379"
 	}
 	pool := newPool()
 	conn = pool.Get()
+
+	tpl = template.Must(template.ParseGlob("templates/*.gohtml"))
 }
 
 func main() {
@@ -92,40 +104,43 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	artist, title, err := getSpotifyTrack(client, w)
+	result, err := getSpotifyTrack(client, w)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	lyric := getCachedLyrics(artist, title)
-	fmt.Fprintf(w, lyric)
-	//fmt.Fprint(w, "Logout: ")
+	lyrics := getCachedLyrics(result.Artist, result.Title)
+	lyrics = strings.Replace(lyrics, "\n", "<br>", -1) // replace all newlines with proper html tag
+	result.Text = template.HTML(lyrics)
+	err = tpl.ExecuteTemplate(w, "index.gohtml", result)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 }
 
-func getSpotifyTrack(client *spotify.Client, w http.ResponseWriter) (string, string, error) {
+func getSpotifyTrack(client *spotify.Client, w http.ResponseWriter) (*Result, error) {
 	var playerState *spotify.PlayerState
+	result := &Result{}
 
 	user, e := client.CurrentUser()
 	if e != nil {
 		fmt.Printf("Getting user: %s", e.Error())
-		return "", "", e
+		return nil, e
 	}
-	fmt.Fprintf(w, "You are logged in as: %s\n", user.ID)
+	result.Username = user.ID
 
 	playerState, e = client.PlayerState()
-
 	currPlaying := playerState.CurrentlyPlaying
-
 	if currPlaying.Playing == true && currPlaying.Item != nil {
-		artist := currPlaying.Item.SimpleTrack.Artists[0].Name
-		title := currPlaying.Item.SimpleTrack.Name
-		fmt.Fprintf(w, "Found your %s (%s)\n\n", playerState.Device.Type, playerState.Device.Name)
-		fmt.Fprintf(w, "Artist: %s\nTitle: %s\n\n", artist, title)
-		return artist, title, nil
+		result.Artist = currPlaying.Item.SimpleTrack.Artists[0].Name
+		result.Title = currPlaying.Item.SimpleTrack.Name
+		result.DeviceType = playerState.Device.Type
+		result.DeviceName = playerState.Device.Name
+		return result, nil
 	} else {
-		return "", "", errors.New("Spotify Track Not Found\n")
+		return nil, errors.New("Spotify Track Not Found\n")
 	}
 
 }

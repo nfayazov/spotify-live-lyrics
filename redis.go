@@ -1,11 +1,13 @@
 package main
 
 import (
-	json "encoding/json"
+	"encoding/json"
 	"github.com/gomodule/redigo/redis"
 )
 
-const sessionPrefix string = "session:"
+const sessionPrefix string = "session"
+const statePrefix 	string = "state"
+const lyricPrefix	string = "lyric"
 
 func newPool() *redis.Pool {
 	return &redis.Pool{
@@ -27,7 +29,7 @@ func setSession(sessionId string, s session) error {
 		return err
 	}
 
-	_, err = conn.Do("SETEX", sessionPrefix+sessionId, sessionLength, json)
+	_, err = conn.Do("SETEX", sessionPrefix+":"+sessionId, sessionLength, json)
 	if err != nil {
 		return err
 	}
@@ -36,7 +38,7 @@ func setSession(sessionId string, s session) error {
 }
 
 func getSessionFromRedis(sessionId string) (*session, error) {
-	tmp, err := redis.String(conn.Do("GET", sessionPrefix+sessionId))
+	tmp, err := redis.String(conn.Do("GET", sessionPrefix+":"+sessionId))
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,6 @@ func getSessionFromRedis(sessionId string) (*session, error) {
 	}
 
 	return &s, nil
-
 }
 
 func deleteSession(sessionId string) error {

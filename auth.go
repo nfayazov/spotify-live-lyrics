@@ -18,10 +18,7 @@ type session struct {
 	LastActivity time.Time
 }
 
-const (
-	sessionLength			= 900	// 30 mins
-	sessionCleanupInterval 	= 15	// 10 mins
-)
+const sessionLength	= 900	// 30 mins
 
 var (
 	states      = make(map[string]string)	// sID, oauth state

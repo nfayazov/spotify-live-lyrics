@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spotify Live Lyrics</title>
+    <!-- we haven't learned to serve files yet ... -->
+    <link rel="stylesheet" href="public/main.css">
+</head>
+<body>
+    <div style="font-family: 'Palatino'">
+        {{if .Text}}
+            You are logged in as: {{.Username}}<br>
+            Found your {{.DeviceType}} ({{.DeviceName}})<br><br>
+            <strong>Artist: {{.Artist}}, Title: {{.Title}}<br><br> </strong>
+
+            {{.Text}}<br><br>
+        {{else}}
+            Lyrics Not Found :(
+        {{end}}
+    </div>
+    <a href="/logout">Logout</a>
+</body>
+</html>
