@@ -18,7 +18,7 @@ deploy:
     app: spotify-lyrics
     env: SpotifyLyrics-env
     bucket_name: elasticbeanstalk-us-west-1-722925451625
-    bucket_path:  spotify-lyrics
+    bucket_path: spotify-lyrics
     on:
       branch: master
     access_key_id: $AWS_ACCESS_KEY
