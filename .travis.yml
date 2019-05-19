@@ -1,0 +1,26 @@
+sudo: required
+services:
+  - docker
+
+script:
+  - docker build -t nfayazov/spotify-live-lyricist .
+  - docker build -t nfayazov/spotify-nginx ./nginx
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+
+  # Push these images to docker hub
+  - docker push nfayazov/spotify-live-lyricist
+  - docker push nfayazov/spotify-nginx
+
+deploy:
+    provider: elasticbeanstalk
+    region: us-west-1
+    app: spotify-lyrics
+    env: SpotifyLyrics-env
+    bucket_name: elasticbeanstalk-us-west-1-722925451625
+    bucket_path:  spotify-lyrics
+    on:
+      branch: master
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key:
+      secure: $AWS_SECRET_KEY
